@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>bike share in LA</title>
+
+<script src="site_libs/jquery-1.12.4/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<script src="site_libs/htmlwidgets-1.5.1/htmlwidgets.js"></script>
+<link href="site_libs/leaflet-1.3.1/leaflet.css" rel="stylesheet" />
+<script src="site_libs/leaflet-1.3.1/leaflet.js"></script>
+<link href="site_libs/leafletfix-1.0.0/leafletfix.css" rel="stylesheet" />
+<script src="site_libs/Proj4Leaflet-1.0.1/proj4-compressed.js"></script>
+<script src="site_libs/Proj4Leaflet-1.0.1/proj4leaflet.js"></script>
+<link href="site_libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css" rel="stylesheet" />
+<script src="site_libs/leaflet-binding-2.0.3/leaflet.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Bike Shares in LA</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="bike-share.html">Bike Shares in LA</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">bike share in LA</h1>
+
+</div>
+
+
+<p>I have always been interested in knowing the current status of bike sharing in the US. I am a bike share enthusiast and used a lot of bike sharing service in China. The other day I found the data on bike share in LA and had the urge to analyze it.</p>
+<p>The data comes from Metrobike share website at <a href="https://bikeshare.metro.net/about/data/">here</a>.</p>
+<pre class="r"><code># read in the data
+files &lt;- list.files(path = &quot;data&quot;, pattern = &quot;.q[0-9].csv$&quot;, full.names = TRUE)
+bike_share_1 &lt;- lapply(files, read.csv) 
+
+
+# the original datasets have different formats of datetime, now convert the datetime to the same format
+for(i in seq_along(bike_share_1)) {
+  bike_share_1[[i]]$start_time &lt;- str_replace(bike_share_1[[i]]$start_time, &quot;([0-9]+)-([0-9]+)-([0-9]+)\\s([0-9]+):([0-9]+)(:[0-9]+)?&quot;, &quot;\\2/\\3/\\1 \\4:\\5&quot;)
+    bike_share_1[[i]]$end_time &lt;- str_replace(bike_share_1[[i]]$end_time, &quot;([0-9]+)-([0-9]+)-([0-9]+)\\s([0-9]+):([0-9]+)(:[0-9]+)?&quot;, &quot;\\2/\\3/\\1 \\4:\\5&quot;)
+  }
+
+# combine all the data frames
+bike_share &lt;- do.call(&quot;rbind&quot;, bike_share_1)
+
+# see if the combined dataset is correct by checking its number of rows
+nrow(bike_share)</code></pre>
+<pre><code>## [1] 420935</code></pre>
+<pre class="r"><code>#check the total number of rows before the data is combined
+row_count &lt;- 0
+for(i in seq_along(bike_share_1)) {
+  
+  row_count &lt;- row_count + nrow(bike_share_1[[i]])
+ 
+}
+row_count</code></pre>
+<pre><code>## [1] 420935</code></pre>
+<div id="data-preparation" class="section level2">
+<h2>Data Preparation</h2>
+<pre class="r"><code>str(bike_share)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    420935 obs. of  15 variables:
+##  $ trip_id            : int  112536773 112536772 112538689 112538688 112538687 112538686 112538685 112537730 112538445 112537729 ...
+##  $ duration           : int  7 6 32 30 28 28 27 7 19 6 ...
+##  $ start_time         : chr  &quot;01/01/2019 00:07&quot; &quot;01/01/2019 00:08&quot; &quot;01/01/2019 00:18&quot; &quot;01/01/2019 00:20&quot; ...
+##  $ end_time           : chr  &quot;01/01/2019 00:14&quot; &quot;01/01/2019 00:14&quot; &quot;01/01/2019 00:50&quot; &quot;01/01/2019 00:50&quot; ...
+##  $ start_station      : int  3046 3046 3030 3030 3030 3030 3030 3029 3030 3029 ...
+##  $ start_lat          : num  34.1 34.1 34.1 34.1 34.1 ...
+##  $ start_lon          : num  -118 -118 -118 -118 -118 ...
+##  $ end_station        : int  3051 3051 3075 3075 3075 3075 3075 3038 3031 3038 ...
+##  $ end_lat            : num  34 34 34 34 34 ...
+##  $ end_lon            : num  -118 -118 -118 -118 -118 ...
+##  $ bike_id            : chr  &quot;06468&quot; &quot;12311&quot; &quot;05992&quot; &quot;05860&quot; ...
+##  $ plan_duration      : int  1 1 1 1 1 1 1 1 1 1 ...
+##  $ trip_route_category: chr  &quot;One Way&quot; &quot;One Way&quot; &quot;One Way&quot; &quot;One Way&quot; ...
+##  $ passholder_type    : chr  &quot;Walk-up&quot; &quot;Walk-up&quot; &quot;Walk-up&quot; &quot;Walk-up&quot; ...
+##  $ bike_type          : chr  &quot;standard&quot; &quot;standard&quot; &quot;standard&quot; &quot;standard&quot; ...</code></pre>
+<pre class="r"><code>summary(bike_share)</code></pre>
+<pre><code>##     trip_id             duration        start_time          end_time         start_station 
+##  Min.   :112536772   Min.   :   1.00   Length:420935      Length:420935      Min.   :3000  
+##  1st Qu.:123469693   1st Qu.:   6.00   Class :character   Class :character   1st Qu.:3018  
+##  Median :129815257   Median :  12.00   Mode  :character   Mode  :character   Median :3047  
+##  Mean   :129577499   Mean   :  31.57                                         Mean   :3413  
+##  3rd Qu.:136496204   3rd Qu.:  23.00                                         3rd Qu.:4247  
+##  Max.   :144432075   Max.   :1440.00                                         Max.   :4524  
+##                                                                                            
+##    start_lat       start_lon       end_station      end_lat         end_lon      
+##  Min.   :33.71   Min.   :-118.5   Min.   :3000   Min.   :33.71   Min.   :-118.5  
+##  1st Qu.:34.04   1st Qu.:-118.3   1st Qu.:3029   1st Qu.:34.04   1st Qu.:-118.3  
+##  Median :34.05   Median :-118.3   Median :3062   Median :34.05   Median :-118.3  
+##  Mean   :34.04   Mean   :-118.3   Mean   :3480   Mean   :34.04   Mean   :-118.3  
+##  3rd Qu.:34.05   3rd Qu.:-118.2   3rd Qu.:4285   3rd Qu.:34.05   3rd Qu.:-118.2  
+##  Max.   :34.19   Max.   :-118.2   Max.   :4524   Max.   :34.19   Max.   :-118.0  
+##  NA&#39;s   :47950   NA&#39;s   :47950                   NA&#39;s   :15629   NA&#39;s   :15629   
+##    bike_id          plan_duration    trip_route_category passholder_type     bike_type        
+##  Length:420935      Min.   :  1.00   Length:420935       Length:420935      Length:420935     
+##  Class :character   1st Qu.:  1.00   Class :character    Class :character   Class :character  
+##  Mode  :character   Median : 30.00   Mode  :character    Mode  :character   Mode  :character  
+##                     Mean   : 58.08                                                            
+##                     3rd Qu.: 30.00                                                            
+##                     Max.   :999.00                                                            
+## </code></pre>
+<pre class="r"><code># check No. of NAs
+map_dbl(bike_share, function(x) sum(is.na(x)))</code></pre>
+<pre><code>##             trip_id            duration          start_time            end_time 
+##                   0                   0                   0                   0 
+##       start_station           start_lat           start_lon         end_station 
+##                   0               47950               47950                   0 
+##             end_lat             end_lon             bike_id       plan_duration 
+##               15629               15629                   0                   0 
+## trip_route_category     passholder_type           bike_type 
+##                   0                   0                   0</code></pre>
+<pre class="r"><code># check the percentage of missing values
+map_dbl(bike_share, function(x) mean(is.na(x)))</code></pre>
+<pre><code>##             trip_id            duration          start_time            end_time 
+##          0.00000000          0.00000000          0.00000000          0.00000000 
+##       start_station           start_lat           start_lon         end_station 
+##          0.00000000          0.11391307          0.11391307          0.00000000 
+##             end_lat             end_lon             bike_id       plan_duration 
+##          0.03712925          0.03712925          0.00000000          0.00000000 
+## trip_route_category     passholder_type           bike_type 
+##          0.00000000          0.00000000          0.00000000</code></pre>
+<pre class="r"><code># convert start_time, end_time to the correct data type
+bike_share &lt;- bike_share %&gt;% 
+  mutate(start_time=mdy_hm(start_time), end_time=mdy_hm(end_time))
+
+# check if the date type has been converted
+class(bike_share$start_time)</code></pre>
+<pre><code>## [1] &quot;POSIXct&quot; &quot;POSIXt&quot;</code></pre>
+<pre class="r"><code>class(bike_share$end_time)</code></pre>
+<pre><code>## [1] &quot;POSIXct&quot; &quot;POSIXt&quot;</code></pre>
+<pre class="r"><code># check data consistency
+sum((bike_share$start_time%--%bike_share$end_time)%/%minutes(1) != bike_share$duration)</code></pre>
+<pre><code>## [1] 3611</code></pre>
+<pre class="r"><code># there are data points where duration is not equal the difference between start time and end time, let&#39;s fix that by mutating the duration variable
+bike_share &lt;- bike_share %&gt;% 
+  mutate(duration=(bike_share$start_time%--%bike_share$end_time)%/%minutes(1))
+str(bike_share)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    420935 obs. of  15 variables:
+##  $ trip_id            : int  112536773 112536772 112538689 112538688 112538687 112538686 112538685 112537730 112538445 112537729 ...
+##  $ duration           : num  7 6 32 30 28 28 27 7 19 6 ...
+##  $ start_time         : POSIXct, format: &quot;2019-01-01 00:07:00&quot; &quot;2019-01-01 00:08:00&quot; &quot;2019-01-01 00:18:00&quot; ...
+##  $ end_time           : POSIXct, format: &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:50:00&quot; ...
+##  $ start_station      : int  3046 3046 3030 3030 3030 3030 3030 3029 3030 3029 ...
+##  $ start_lat          : num  34.1 34.1 34.1 34.1 34.1 ...
+##  $ start_lon          : num  -118 -118 -118 -118 -118 ...
+##  $ end_station        : int  3051 3051 3075 3075 3075 3075 3075 3038 3031 3038 ...
+##  $ end_lat            : num  34 34 34 34 34 ...
+##  $ end_lon            : num  -118 -118 -118 -118 -118 ...
+##  $ bike_id            : chr  &quot;06468&quot; &quot;12311&quot; &quot;05992&quot; &quot;05860&quot; ...
+##  $ plan_duration      : int  1 1 1 1 1 1 1 1 1 1 ...
+##  $ trip_route_category: chr  &quot;One Way&quot; &quot;One Way&quot; &quot;One Way&quot; &quot;One Way&quot; ...
+##  $ passholder_type    : chr  &quot;Walk-up&quot; &quot;Walk-up&quot; &quot;Walk-up&quot; &quot;Walk-up&quot; ...
+##  $ bike_type          : chr  &quot;standard&quot; &quot;standard&quot; &quot;standard&quot; &quot;standard&quot; ...</code></pre>
+<pre class="r"><code>bike_share %&gt;% 
+  filter(passholder_type==&quot;Walk-up&quot;) %&gt;% 
+  count(plan_duration)</code></pre>
+<pre><code>## Warning: `...` is not empty.
+## 
+## We detected these problematic arguments:
+## * `needs_dots`
+## 
+## These dots only exist to allow future extensions and should be empty.
+## Did you misspecify an argument?</code></pre>
+<pre><code>## # A tibble: 3 x 2
+##   plan_duration     n
+##           &lt;int&gt; &lt;int&gt;
+## 1             1 89289
+## 2            30  2793
+## 3           365 10507</code></pre>
+<pre class="r"><code># based on the data description on Metrobike share website, 0 is used for a single ride plan (Walk-up). There are loads of walk up plans that are tagged as duration other than 0. Fix this by mutating plan_duration variable.
+bike_share &lt;- bike_share %&gt;% 
+  mutate(plan_duration = if_else(bike_share$passholder_type==&quot;Walk-up&quot;, 0L, bike_share$plan_duration))
+
+bike_share %&gt;% 
+ count(plan_duration, passholder_type)</code></pre>
+<pre><code>## Warning: `...` is not empty.
+## 
+## We detected these problematic arguments:
+## * `needs_dots`
+## 
+## These dots only exist to allow future extensions and should be empty.
+## Did you misspecify an argument?</code></pre>
+<pre><code>## # A tibble: 6 x 3
+##   plan_duration passholder_type      n
+##           &lt;int&gt; &lt;chr&gt;            &lt;int&gt;
+## 1             0 Walk-up         102589
+## 2             1 One Day Pass     24939
+## 3            30 Monthly Pass    259012
+## 4           365 Annual Pass      33930
+## 5           365 Flex Pass          320
+## 6           999 Testing            145</code></pre>
+<pre class="r"><code># There are testing data in the data frame, needs to be removed.
+bike_share &lt;- bike_share %&gt;% 
+  filter(passholder_type != &quot;Testing&quot;)
+
+unique(bike_share$passholder_type)</code></pre>
+<pre><code>## [1] &quot;Walk-up&quot;      &quot;Monthly Pass&quot; &quot;Annual Pass&quot;  &quot;One Day Pass&quot; &quot;Flex Pass&quot;</code></pre>
+<pre class="r"><code>str(bike_share)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    420790 obs. of  15 variables:
+##  $ trip_id            : int  112536773 112536772 112538689 112538688 112538687 112538686 112538685 112537730 112538445 112537729 ...
+##  $ duration           : num  7 6 32 30 28 28 27 7 19 6 ...
+##  $ start_time         : POSIXct, format: &quot;2019-01-01 00:07:00&quot; &quot;2019-01-01 00:08:00&quot; &quot;2019-01-01 00:18:00&quot; ...
+##  $ end_time           : POSIXct, format: &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:50:00&quot; ...
+##  $ start_station      : int  3046 3046 3030 3030 3030 3030 3030 3029 3030 3029 ...
+##  $ start_lat          : num  34.1 34.1 34.1 34.1 34.1 ...
+##  $ start_lon          : num  -118 -118 -118 -118 -118 ...
+##  $ end_station        : int  3051 3051 3075 3075 3075 3075 3075 3038 3031 3038 ...
+##  $ end_lat            : num  34 34 34 34 34 ...
+##  $ end_lon            : num  -118 -118 -118 -118 -118 ...
+##  $ bike_id            : chr  &quot;06468&quot; &quot;12311&quot; &quot;05992&quot; &quot;05860&quot; ...
+##  $ plan_duration      : int  0 0 0 0 0 0 0 0 0 0 ...
+##  $ trip_route_category: chr  &quot;One Way&quot; &quot;One Way&quot; &quot;One Way&quot; &quot;One Way&quot; ...
+##  $ passholder_type    : chr  &quot;Walk-up&quot; &quot;Walk-up&quot; &quot;Walk-up&quot; &quot;Walk-up&quot; ...
+##  $ bike_type          : chr  &quot;standard&quot; &quot;standard&quot; &quot;standard&quot; &quot;standard&quot; ...</code></pre>
+<pre class="r"><code># Obviously, plan_duration, trip_route_category, passholder_type, bike_type should be converted to factor type.
+bike_share &lt;- bike_share %&gt;% 
+  mutate(plan_duration=as.factor(plan_duration),
+         trip_route_category=as.factor(trip_route_category),
+         passholder_type=as.factor(passholder_type),
+         bike_type=as.factor(bike_type))
+
+str(bike_share)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    420790 obs. of  15 variables:
+##  $ trip_id            : int  112536773 112536772 112538689 112538688 112538687 112538686 112538685 112537730 112538445 112537729 ...
+##  $ duration           : num  7 6 32 30 28 28 27 7 19 6 ...
+##  $ start_time         : POSIXct, format: &quot;2019-01-01 00:07:00&quot; &quot;2019-01-01 00:08:00&quot; &quot;2019-01-01 00:18:00&quot; ...
+##  $ end_time           : POSIXct, format: &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:50:00&quot; ...
+##  $ start_station      : int  3046 3046 3030 3030 3030 3030 3030 3029 3030 3029 ...
+##  $ start_lat          : num  34.1 34.1 34.1 34.1 34.1 ...
+##  $ start_lon          : num  -118 -118 -118 -118 -118 ...
+##  $ end_station        : int  3051 3051 3075 3075 3075 3075 3075 3038 3031 3038 ...
+##  $ end_lat            : num  34 34 34 34 34 ...
+##  $ end_lon            : num  -118 -118 -118 -118 -118 ...
+##  $ bike_id            : chr  &quot;06468&quot; &quot;12311&quot; &quot;05992&quot; &quot;05860&quot; ...
+##  $ plan_duration      : Factor w/ 4 levels &quot;0&quot;,&quot;1&quot;,&quot;30&quot;,&quot;365&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ trip_route_category: Factor w/ 2 levels &quot;One Way&quot;,&quot;Round Trip&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ passholder_type    : Factor w/ 5 levels &quot;Annual Pass&quot;,..: 5 5 5 5 5 5 5 5 5 5 ...
+##  $ bike_type          : Factor w/ 3 levels &quot;electric&quot;,&quot;smart&quot;,..: 3 3 3 3 3 3 3 3 3 3 ...</code></pre>
+</div>
+<div id="exploratory-data-analysis" class="section level2">
+<h2>Exploratory Data Analysis</h2>
+<div id="frequency-distribution-of-duration" class="section level3">
+<h3>Frequency Distribution of Duration</h3>
+<pre class="r"><code># set all titles in plots to be centered
+theme_update(plot.title=element_text(hjust = 0.5))
+
+# create histogram of durations
+ggplot(bike_share, aes(duration))+geom_histogram(binwidth = 10)+labs(x=&quot;Duration of Each Ride&quot;, y=&quot;Number of Rides&quot;, title = &quot;Frequency of Duration&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>ggplot(bike_share, aes(duration))+geom_freqpoly(bin=50)</code></pre>
+<pre><code>## Warning: Ignoring unknown parameters: bin</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-3-2.png" width="672" /></p>
+<pre class="r"><code>str(bike_share)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    420790 obs. of  15 variables:
+##  $ trip_id            : int  112536773 112536772 112538689 112538688 112538687 112538686 112538685 112537730 112538445 112537729 ...
+##  $ duration           : num  7 6 32 30 28 28 27 7 19 6 ...
+##  $ start_time         : POSIXct, format: &quot;2019-01-01 00:07:00&quot; &quot;2019-01-01 00:08:00&quot; &quot;2019-01-01 00:18:00&quot; ...
+##  $ end_time           : POSIXct, format: &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:50:00&quot; ...
+##  $ start_station      : int  3046 3046 3030 3030 3030 3030 3030 3029 3030 3029 ...
+##  $ start_lat          : num  34.1 34.1 34.1 34.1 34.1 ...
+##  $ start_lon          : num  -118 -118 -118 -118 -118 ...
+##  $ end_station        : int  3051 3051 3075 3075 3075 3075 3075 3038 3031 3038 ...
+##  $ end_lat            : num  34 34 34 34 34 ...
+##  $ end_lon            : num  -118 -118 -118 -118 -118 ...
+##  $ bike_id            : chr  &quot;06468&quot; &quot;12311&quot; &quot;05992&quot; &quot;05860&quot; ...
+##  $ plan_duration      : Factor w/ 4 levels &quot;0&quot;,&quot;1&quot;,&quot;30&quot;,&quot;365&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ trip_route_category: Factor w/ 2 levels &quot;One Way&quot;,&quot;Round Trip&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ passholder_type    : Factor w/ 5 levels &quot;Annual Pass&quot;,..: 5 5 5 5 5 5 5 5 5 5 ...
+##  $ bike_type          : Factor w/ 3 levels &quot;electric&quot;,&quot;smart&quot;,..: 3 3 3 3 3 3 3 3 3 3 ...</code></pre>
+<pre class="r"><code>range(bike_share$duration)</code></pre>
+<pre><code>## [1]     0 88787</code></pre>
+<p>Apparently, the range shows there are extreme values under <code>duration</code>. It ranges from 0 to more than 80,000 minutes, which is over 60 days. Someone cannot ride a bicycle for that long, at least in a city with a shared bike. according to the metroshare website, a good range should be from 1 minute to 1440 minutes(24 hours).</p>
+<p>Even with a range between 1 and 1440, it is difficult to see the distribution. We will have to narrow the range to get a better view.</p>
+<pre class="r"><code>bike_share %&gt;% 
+dplyr::filter(duration&lt;=250&amp;duration&gt;=1) %&gt;% 
+mutate(itl=cut_width(duration, 10, boundary=10, closed = &quot;left&quot;)) %&gt;% 
+count(itl) %&gt;% 
+mutate(pct=n/sum(n)*100) %&gt;% 
+arrange(itl) %&gt;% 
+   ggplot(aes(x=itl))+geom_bar(aes(y=pct), stat = &quot;identity&quot;, fill=&quot;green&quot;, color=&quot;black&quot;)+labs(x=&quot;Duration of Each Ride(Minutes)&quot;, y=&quot;% of Rides&quot;, title = &quot;Duration Breakdown&quot;)+theme(axis.text.x = element_text(angle=70,hjust =1 ,size=8))+geom_text(aes(label=sprintf(&quot;%0.2f&quot;, pct), y=pct+2), size=2.5, hjust=0.5)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>The duration histogram aligns with my expectation that it peaks in count at the shorter rides. The number of rides peak at the duration of around 1-10 minutes. The distribution has a long tail at the upper end. I expect those long rides are usually done by tourists with walk-up or one-day pass type. I will examine this later on. For this histogram, I will create a better plot showing the percentage each interval is of all durations.</p>
+<p>##Station Frequency</p>
+<pre class="r"><code># read in the station data
+stations &lt;- read_csv(&quot;data/metro-bike-share-stations-2020-07-01.csv&quot;)
+
+# join bike_share data frame and stations data frame
+
+bike_share_duration &lt;- bike_share %&gt;% 
+  filter(duration&gt;0 &amp; duration&lt;=1440)
+
+bike_share_station &lt;- bike_share_duration %&gt;% 
+  left_join(stations %&gt;% select(-Go_live_date, -Status), by=c(&quot;start_station&quot;=&quot;Station_ID&quot;)) %&gt;% 
+  rename(start_station_name=&quot;Station_Name&quot;, start_station_region=&quot;Region&quot;)
+
+bike_share_station&lt;- bike_share_station %&gt;% 
+  left_join(stations %&gt;% select(-Go_live_date, -Status), by=c(&quot;end_station&quot;=&quot;Station_ID&quot;)) %&gt;% 
+  rename(end_station_name=&quot;Station_Name&quot;, end_station_region=&quot;Region&quot;)
+
+str(bike_share_station)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    418936 obs. of  19 variables:
+##  $ trip_id             : int  112536773 112536772 112538689 112538688 112538687 112538686 112538685 112537730 112538445 112537729 ...
+##  $ duration            : num  7 6 32 30 28 28 27 7 19 6 ...
+##  $ start_time          : POSIXct, format: &quot;2019-01-01 00:07:00&quot; &quot;2019-01-01 00:08:00&quot; &quot;2019-01-01 00:18:00&quot; ...
+##  $ end_time            : POSIXct, format: &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:50:00&quot; ...
+##  $ start_station       : num  3046 3046 3030 3030 3030 ...
+##  $ start_lat           : num  34.1 34.1 34.1 34.1 34.1 ...
+##  $ start_lon           : num  -118 -118 -118 -118 -118 ...
+##  $ end_station         : num  3051 3051 3075 3075 3075 ...
+##  $ end_lat             : num  34 34 34 34 34 ...
+##  $ end_lon             : num  -118 -118 -118 -118 -118 ...
+##  $ bike_id             : chr  &quot;06468&quot; &quot;12311&quot; &quot;05992&quot; &quot;05860&quot; ...
+##  $ plan_duration       : Factor w/ 4 levels &quot;0&quot;,&quot;1&quot;,&quot;30&quot;,&quot;365&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ trip_route_category : Factor w/ 2 levels &quot;One Way&quot;,&quot;Round Trip&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ passholder_type     : Factor w/ 5 levels &quot;Annual Pass&quot;,..: 5 5 5 5 5 5 5 5 5 5 ...
+##  $ bike_type           : Factor w/ 3 levels &quot;electric&quot;,&quot;smart&quot;,..: 3 3 3 3 3 3 3 3 3 3 ...
+##  $ start_station_name  : chr  &quot;2nd &amp; Hill&quot; &quot;2nd &amp; Hill&quot; &quot;Main &amp; 1st&quot; &quot;Main &amp; 1st&quot; ...
+##  $ start_station_region: chr  &quot;DTLA&quot; &quot;DTLA&quot; &quot;DTLA&quot; &quot;DTLA&quot; ...
+##  $ end_station_name    : chr  &quot;7th &amp; Broadway&quot; &quot;7th &amp; Broadway&quot; &quot;Broadway &amp; 9th&quot; &quot;Broadway &amp; 9th&quot; ...
+##  $ end_station_region  : chr  &quot;DTLA&quot; &quot;DTLA&quot; &quot;DTLA&quot; &quot;DTLA&quot; ...</code></pre>
+<pre class="r"><code>first_10_start &lt;- bike_share_station %&gt;% 
+  count(start_station_region, start_station_name) %&gt;% 
+  arrange(desc(n)) %&gt;% 
+  head(10)
+
+ggplot(first_10_start)+geom_bar(aes(x=fct_reorder(as.factor(start_station_name),n), y=n, fill=as.factor(start_station_region)), stat = &quot;identity&quot;)+theme_economist_white()+scale_fill_manual(name=&quot;Region&quot;, values = c(&quot;#347a94&quot;, &quot;#29a96b&quot;, &quot;#ffa600&quot;))+labs(x=&quot;&quot;, y=&quot;&quot;, title = &quot;Start Station Distribution (First 10)&quot;)+coord_flip()</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>The Virtual Station, according to the metroshare website, is used by staff to check in or check out a bike remotely for a special event or in a situation in which a bike could not otherwise be checked in or out to a station. And the rest of stations are mostly located in downtown LA, except 1 is in Westside.</p>
+</div>
+<div id="end-station" class="section level3">
+<h3>End Station</h3>
+<p>Now let’s take a look at the distribution of end stations.</p>
+<pre class="r"><code>first_10_end &lt;- bike_share_station %&gt;% 
+  count(end_station_region, end_station_name) %&gt;% 
+  arrange(desc(n)) %&gt;% 
+  head(10)
+
+ggplot(first_10_end)+geom_bar(aes(x=fct_reorder(as.factor(end_station_name),n), y=n, fill=as.factor(end_station_region)), stat = &quot;identity&quot;)+theme_economist_white()+scale_fill_manual(name=&quot;Region&quot;, values = c(&quot;#347a94&quot;, &quot;#ffa600&quot;))+labs(x=&quot;&quot;, y=&quot;&quot;, title = &quot;End Station Distribution (First 10)&quot;)+coord_flip()</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>Similarly, the end stations are all located in downtown LA with one exception in Westside.</p>
+</div>
+<div id="trip-route-frequency" class="section level3">
+<h3>Trip Route Frequency</h3>
+<pre class="r"><code>ggplot(bike_share_duration, aes(as.factor(trip_route_category)))+geom_bar(aes(y=..prop.., group=1), fill=&quot;#cccf6e&quot;, color=&quot;black&quot;, width = 0.5)+labs(x=&quot;&quot;, title = &quot;Proportions of Trip Route&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>One-way trips account for most of the rides. More than 80% of rides are one way.</p>
+</div>
+<div id="passholder-type" class="section level3">
+<h3>Passholder Type</h3>
+<pre class="r"><code>ggplot(bike_share)+geom_bar(aes(x=passholder_type, y=..prop.., group=1), fill=&quot;#9da0d1&quot;, color=&quot;black&quot;)+labs(x=&quot;&quot;, title = &quot;Proportions of Passholer Types&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>More than 60% of the rides used Monthly Pass, over 20% are with Walk-up and comes next is Annual Pass with nearly 10%.</p>
+</div>
+<div id="bike-types" class="section level3">
+<h3>Bike Types</h3>
+<pre class="r"><code>ggplot(bike_share)+geom_bar(aes(x=bike_type, y=..prop.., group=1), fill=&quot;#fea884&quot;, color=&quot;black&quot;, width=0.5)+labs(x=&quot;&quot;, title = &quot;Proportions of Bike Types&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>Nearly half of the rides were done with standard bicycles and around 37% were with electric bikes.</p>
+</div>
+<div id="bike-rides-at-different-regions" class="section level3">
+<h3>Bike Rides at Different Regions</h3>
+<pre class="r"><code>ggplot(bike_share_station, aes(x=as.factor(start_station_region), y=..prop..))+geom_bar(aes(group=1), fill=&quot;peru&quot;, color=&quot;black&quot;)+labs(x=&quot;&quot;, y=&quot;&quot;, title=&quot;Bike Rides Start Regions vs Proportions of Bike Rides &quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>Not surprisingly, over 70% of the rides started in downtown LA. There are NA values, let’s extract those rows and take a look.</p>
+<pre class="r"><code>bike_share_station %&gt;% 
+  filter(is.na(start_station_region)) %&gt;% 
+  head()</code></pre>
+<pre><code>##     trip_id duration          start_time            end_time start_station start_lat start_lon
+## 1 119420671       58 2019-04-13 11:39:00 2019-04-13 12:37:00          4363  34.03046 -118.3891
+## 2 119623383       18 2019-04-16 12:47:00 2019-04-16 13:05:00          4363  34.03046 -118.3891
+## 3 120678427        3 2019-05-02 18:56:00 2019-05-02 18:59:00          4327  34.17245 -118.3704
+## 4 120870725       58 2019-05-05 14:31:00 2019-05-05 15:29:00          4363  34.03046 -118.3891
+## 5 121553263       30 2019-05-15 17:58:00 2019-05-15 18:28:00          4108  34.02589 -118.2382
+## 6 121736260        8 2019-05-18 13:40:00 2019-05-18 13:48:00          4363  34.03046 -118.3891
+##   end_station  end_lat   end_lon bike_id plan_duration trip_route_category passholder_type
+## 1        4381 34.00033 -118.4023   16239             0             One Way         Walk-up
+## 2        4330 34.02569 -118.3953   15386           365             One Way     Annual Pass
+## 3        4332 34.02948 -118.4105   16098             0             One Way         Walk-up
+## 4        4346 33.98434 -118.4715   15723             0             One Way         Walk-up
+## 5        3000       NA        NA   18854           365             One Way     Annual Pass
+## 6        4372 34.02788 -118.3889   15652             0             One Way         Walk-up
+##   bike_type start_station_name start_station_region                        end_station_name
+## 1     smart               &lt;NA&gt;                 &lt;NA&gt;                     Sepulveda &amp; Lucerne
+## 2     smart               &lt;NA&gt;                 &lt;NA&gt;                         Bagley &amp; Venice
+## 3     smart               &lt;NA&gt;                 &lt;NA&gt;                        National &amp; Motor
+## 4     smart               &lt;NA&gt;                 &lt;NA&gt;         Ocean Front Walk &amp; North Venice
+## 5  electric               &lt;NA&gt;                 &lt;NA&gt;                         Virtual Station
+## 6     smart               &lt;NA&gt;                 &lt;NA&gt; Public Bike Rack: Culver City Expo Line
+##   end_station_region
+## 1           Westside
+## 2           Westside
+## 3           Westside
+## 4           Westside
+## 5                N/A
+## 6           Westside</code></pre>
+<p>It’s only 3o data points without a valid start station name, we can drop these data. Also a similar approach shows that the start station region with N/A value are mostly for virtual station, which is used for staff to check in or out for events. These data points can also be dropped. In addition, the free bikes looks weird. Let’s extract those data points and take a close look.</p>
+<pre class="r"><code>bike_share_station %&gt;% 
+  filter(start_station_region==&quot;Free Bikes&quot;) %&gt;% 
+  head()</code></pre>
+<pre><code>##     trip_id duration          start_time            end_time start_station start_lat start_lon
+## 1 116436041        1 2019-02-28 09:59:00 2019-02-28 10:00:00          4285        NA        NA
+## 2 116443146       55 2019-02-28 11:45:00 2019-02-28 12:40:00          4285        NA        NA
+## 3 116442943        1 2019-02-28 12:37:00 2019-02-28 12:38:00          4285        NA        NA
+## 4 116449658       66 2019-02-28 14:25:00 2019-02-28 15:31:00          4285        NA        NA
+## 5 116450754        1 2019-02-28 15:55:00 2019-02-28 15:56:00          4285        NA        NA
+## 6 116455502       18 2019-02-28 17:25:00 2019-02-28 17:43:00          4285        NA        NA
+##   end_station  end_lat   end_lon bike_id plan_duration trip_route_category passholder_type
+## 1        4285       NA        NA   15573           365          Round Trip     Annual Pass
+## 2        4285       NA        NA   15157             0          Round Trip         Walk-up
+## 3        3000       NA        NA   15892           365             One Way     Annual Pass
+## 4        4285       NA        NA   16210             0          Round Trip         Walk-up
+## 5        3000       NA        NA   15668           365             One Way     Annual Pass
+## 6        4344 34.01431 -118.4913   15157             0             One Way         Walk-up
+##   bike_type          start_station_name start_station_region
+## 1     smart Metro Bike Share Free Bikes           Free Bikes
+## 2     smart Metro Bike Share Free Bikes           Free Bikes
+## 3     smart Metro Bike Share Free Bikes           Free Bikes
+## 4     smart Metro Bike Share Free Bikes           Free Bikes
+## 5     smart Metro Bike Share Free Bikes           Free Bikes
+## 6     smart Metro Bike Share Free Bikes           Free Bikes
+##                          end_station_name end_station_region
+## 1             Metro Bike Share Free Bikes         Free Bikes
+## 2             Metro Bike Share Free Bikes         Free Bikes
+## 3                         Virtual Station                N/A
+## 4             Metro Bike Share Free Bikes         Free Bikes
+## 5                         Virtual Station                N/A
+## 6 Downtown Santa Monica Expo Line Station           Westside</code></pre>
+<p>The station providing free bikes consists of less than 1% of the total bike rides, which can be dropped. The refined plot is as follows:</p>
+<pre class="r"><code>ggplot(bike_share_station %&gt;% filter(start_station_region %in% c(&quot;DTLA&quot;, &quot;North Hollywood&quot;, &quot;Port of LA&quot;, &quot;Westside&quot;)), aes(x=as.factor(start_station_region), y=..prop..))+geom_bar(aes(group=1), fill=&quot;peru&quot;, color=&quot;black&quot;)+labs(x=&quot;&quot;, y=&quot;&quot;, title=&quot;Bike Rides Start Regions vs Proportions of Bike Rides &quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+</div>
+</div>
+<div id="time-series-analysis" class="section level2">
+<h2>Time series analysis</h2>
+<pre class="r"><code># extract year, month, day and hour from the start_time variable and create new variables for them.
+
+bike_share_duration &lt;- bike_share_duration %&gt;% 
+  mutate(year_start=year(start_time),
+         start_date=as_date(start_time),
+         month_start=month(start_time, label = TRUE),
+         day_of_the_week=wday(start_time, label = TRUE, week_start = 1),
+         hour=hour(start_time))
+
+str(bike_share_duration)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    418936 obs. of  20 variables:
+##  $ trip_id            : int  112536773 112536772 112538689 112538688 112538687 112538686 112538685 112537730 112538445 112537729 ...
+##  $ duration           : num  7 6 32 30 28 28 27 7 19 6 ...
+##  $ start_time         : POSIXct, format: &quot;2019-01-01 00:07:00&quot; &quot;2019-01-01 00:08:00&quot; &quot;2019-01-01 00:18:00&quot; ...
+##  $ end_time           : POSIXct, format: &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:14:00&quot; &quot;2019-01-01 00:50:00&quot; ...
+##  $ start_station      : int  3046 3046 3030 3030 3030 3030 3030 3029 3030 3029 ...
+##  $ start_lat          : num  34.1 34.1 34.1 34.1 34.1 ...
+##  $ start_lon          : num  -118 -118 -118 -118 -118 ...
+##  $ end_station        : int  3051 3051 3075 3075 3075 3075 3075 3038 3031 3038 ...
+##  $ end_lat            : num  34 34 34 34 34 ...
+##  $ end_lon            : num  -118 -118 -118 -118 -118 ...
+##  $ bike_id            : chr  &quot;06468&quot; &quot;12311&quot; &quot;05992&quot; &quot;05860&quot; ...
+##  $ plan_duration      : Factor w/ 4 levels &quot;0&quot;,&quot;1&quot;,&quot;30&quot;,&quot;365&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ trip_route_category: Factor w/ 2 levels &quot;One Way&quot;,&quot;Round Trip&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ passholder_type    : Factor w/ 5 levels &quot;Annual Pass&quot;,..: 5 5 5 5 5 5 5 5 5 5 ...
+##  $ bike_type          : Factor w/ 3 levels &quot;electric&quot;,&quot;smart&quot;,..: 3 3 3 3 3 3 3 3 3 3 ...
+##  $ year_start         : num  2019 2019 2019 2019 2019 ...
+##  $ start_date         : Date, format: &quot;2019-01-01&quot; &quot;2019-01-01&quot; &quot;2019-01-01&quot; ...
+##  $ month_start        : Ord.factor w/ 12 levels &quot;Jan&quot;&lt;&quot;Feb&quot;&lt;&quot;Mar&quot;&lt;..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ day_of_the_week    : Ord.factor w/ 7 levels &quot;Mon&quot;&lt;&quot;Tue&quot;&lt;&quot;Wed&quot;&lt;..: 2 2 2 2 2 2 2 2 2 2 ...
+##  $ hour               : int  0 0 0 0 0 0 0 0 0 0 ...</code></pre>
+<pre class="r"><code>bike_share_duration %&gt;% 
+  count(year_start, month_start) %&gt;% 
+  ggplot(aes(month_start, n, group=as.factor(year_start)))+geom_point(aes(color=as.factor(year_start)))+geom_line(aes(color=as.factor(year_start)))+labs(x=&quot;&quot;, y=&quot;&quot;, title = &quot;Month vs Number of Rides&quot;)+scale_color_manual(&quot;Year&quot;, values = c(&quot;#42c494&quot;, &quot;#cccf6e&quot;))+theme(axis.text.x=element_text(angle = 60, face =&quot;bold&quot;, size= 10,hjust=1))</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<p>In 2019, the use of bike shar service had a sharp increase in summer with a peak in August, which is quite reasonable. People loves to go outdoors in summer and enjoy the summer time. 2020 started strong with more rides than the same time in 2019, but then Coronavirus pandemic hit and in March, California implemented strict stay at home order, the number slumped in March and continued to decrease in April. As California started to reopen slowly in May, you can see the number went up but quickly dropped to where it was in April, probably due to the surge of infection cases after the reopening.</p>
+<div id="the-use-of-bikes-on-different-days-throughout-the-week" class="section level3">
+<h3>the Use of Bikes on Different Days Throughout the Week</h3>
+<pre class="r"><code># year 2019
+p1 &lt;- bike_share_duration %&gt;% 
+  inner_join(bike_share_station, by=c(&quot;trip_id&quot;)) %&gt;% 
+  filter(year_start==2019, start_station_region %in% c(&quot;DTLA&quot;, &quot;North Hollywood&quot;, &quot;Port of LA&quot;, &quot;Westside&quot;)) %&gt;% 
+  count(start_station_region, day_of_the_week) %&gt;% 
+  mutate(pct=n/sum(n)*100) %&gt;% 
+  ggplot(aes(x=day_of_the_week,y=pct))+geom_point(aes(color=as.factor(start_station_region)), alpha=0.4,size=4)+scale_y_continuous(breaks=seq(0,20,2))+scale_color_discrete(&quot;Regions&quot;)+labs(x=&quot;Day of the Week&quot;, y=&quot;% of the Bike Rides&quot;, title = &quot;Percentage of Bike Rides vs. Day of the Week&quot;, subtitle = &quot;Year: 2019&quot;)
+
+# year 2020 from Jan through Jun
+p2 &lt;- bike_share_duration %&gt;% 
+  inner_join(bike_share_station, by=c(&quot;trip_id&quot;)) %&gt;% 
+  filter(year_start==2020, start_station_region %in% c(&quot;DTLA&quot;, &quot;North Hollywood&quot;, &quot;Port of LA&quot;, &quot;Westside&quot;)) %&gt;% 
+  count(start_station_region, day_of_the_week) %&gt;% 
+  mutate(pct=n/sum(n)*100) %&gt;% 
+  ggplot(aes(x=day_of_the_week,y=pct))+geom_point(aes(color=as.factor(start_station_region)), alpha=0.4,size=4)+scale_y_continuous(breaks=seq(0,20,2))+scale_color_discrete(&quot;Regions&quot;)+labs(x=&quot;Day of the Week&quot;, y=&quot;% of the Bike Rides&quot;, title = &quot;Percentage of Bike Rides vs. Day of the Week&quot;, subtitle = &quot;Year: 2020&quot;)
+
+grid.arrange(p1, p2, ncol = 1)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p>We find in both year 2019 and 2020:</p>
+<ul>
+<li><p>During the course of the week, downtown LA has more bike rides on weekdays, and it dropped about 4% on weekends. It is probably due to the fact that downtown LA is home to many businesses and companies. Commuters ride bikes between offices and transits.</p></li>
+<li><p>On the other hand, Westside sees a slight increase on weekends.</p></li>
+</ul>
+</div>
+<div id="the-use-of-bikes-throughout-the-day" class="section level3">
+<h3>the Use of Bikes Throughout the day</h3>
+<pre class="r"><code># year 2019
+p3 &lt;- bike_share_duration %&gt;% 
+  filter(year_start==2019) %&gt;% 
+  count(hour) %&gt;% 
+  ggplot(aes(x=hour,y=n))+geom_point(color=&quot;#8cbcac&quot;)+labs(x=&quot;Hour of the Day&quot;, y=&quot;Number of Bike Rides&quot;, title = &quot;Bike Rides vs. Hour of the Day&quot;, subtitle = &quot;Year: 2019&quot;)+geom_line(color=&quot;#488f31&quot;)
+  
+  # year 2020 from Jan through Jun
+  p4 &lt;- bike_share_duration %&gt;% 
+  filter(year_start==2020) %&gt;% 
+  count(hour) %&gt;% 
+  ggplot(aes(x=hour,y=n))+geom_point(color=&quot;#ec9c9d&quot;)+labs(x=&quot;Hour of the Day&quot;, y=&quot;Number of Bike Rides&quot;, title = &quot;Bike Rides vs. Hour of the Day&quot;, subtitle = &quot;Year: 2020&quot;)+geom_line(color=&quot;#de425b&quot;)
+  
+  grid.arrange(p3, p4, nrow=1)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<p>We can see that:</p>
+<ul>
+<li><p>Although the total number of rides differ for year 2019 and 2020(from Jan through Jun), the trend looks almost the same. Both of them peaked at around 5pm, which was the time people usually got off work.</p></li>
+<li><p>During 0- 5am, in 2019, the total number of bike rides is no more than 10,000 during the whole year. In 2020, which only includes Jan through Jun, the number is around 3,000.</p></li>
+</ul>
+<p>To create a better plot, we will use percentage to show the proportions.</p>
+<pre class="r"><code># year 2019
+p5 &lt;- bike_share_duration %&gt;% 
+  filter(year_start==2019) %&gt;% 
+  count(hour) %&gt;% 
+  mutate(pct=n/sum(n)*100) %&gt;% 
+  ggplot(aes(hour, pct))+geom_freqpoly(stat = &quot;identity&quot;, color=&quot;#8f554c&quot;)+labs(x=&quot;Hour of the Day&quot;, y=&quot;% of the Bike Rides&quot;, title=&quot;Bike Rides vs. Hour of the Day&quot;, subtitle = &quot;Year: 2019&quot;)
+
+# year 2020
+p6 &lt;- bike_share_duration %&gt;% 
+  filter(year_start==2020) %&gt;% 
+  count(hour) %&gt;% 
+  mutate(pct=n/sum(n)*100) %&gt;% 
+  ggplot(aes(hour, pct))+geom_freqpoly(stat = &quot;identity&quot;, color=&quot;#9f76de&quot;)+labs(x=&quot;Hour of the Day&quot;, y=&quot;% of the Bike Rides&quot;, title=&quot;Bike Rides vs. Hour of the Day&quot;, subtitle = &quot;Year: 2020&quot;)
+
+grid.arrange(p5, p6, ncol=1)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<p>We can also use a heatmap to show the distribution of bike rides through the lens of hour and day.</p>
+<pre class="r"><code>bike_share_duration %&gt;% 
+  count(day_of_the_week, hour) %&gt;% 
+  ggplot(aes(hour, day_of_the_week, fill=n))+geom_tile()+scale_fill_distiller(name=&quot;&quot;, palette = &quot;Spectral&quot;)+labs(x=&quot;Hour of the Day&quot;, y=&quot;Day of the Week&quot;, title=&quot;Bike Use Throughout the Day and the week&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<p>It’s fairly clear that it boasts the most bike rides at around 5 in the afternoon of every weekday.</p>
+</div>
+<div id="the-variation-of-median-duration-througout-the-week" class="section level3">
+<h3>the Variation of Median Duration Througout the Week</h3>
+<pre class="r"><code>bike_share_duration %&gt;% 
+  group_by(day_of_the_week) %&gt;% 
+  mutate(median_duration=median(duration)) %&gt;% 
+  ggplot(aes(day_of_the_week, median_duration))+geom_point(size=4, color=&quot;peru&quot;)+labs(x=&quot;Day of the Week&quot;, y=&quot;Median Duration&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<p>It is interesting to see that the median duration is higher at weekends but it doesn’t come as as a surprise. People usually have more time to relax and explore the city at weekends. It is intriguing to examine what the median duration looks like across different regions.</p>
+<pre class="r"><code>bike_share_duration %&gt;% 
+  left_join(bike_share_station) %&gt;% 
+  filter(start_station_region %in% c(&quot;DTLA&quot;, &quot;North Hollywood&quot;, &quot;Port of LA&quot;, &quot;Westside&quot;)) %&gt;% 
+  group_by(start_station_region, day_of_the_week) %&gt;% 
+  mutate(median_duration=median(duration)) %&gt;% 
+  ggplot(aes(day_of_the_week, median_duration))+geom_point(aes(color=as.factor(start_station_region)))+geom_line(aes(group=as.factor(start_station_region), color=as.factor(start_station_region)))+labs(x=&quot;Day of the Week&quot;, y=&quot;Median Duration(Minutes)&quot;)+scale_color_discrete(name=&quot;Regions&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<p>This plot shows that:</p>
+<ul>
+<li>Throughout the week, downtown LA has the lowest median duration.</li>
+<li>Except downtown LA, other regions have high median duration. It may be due to the fact that they are mostly sightseeing places for tourists.</li>
+<li>Even in downtown LA, the median duration increases at weekends.</li>
+</ul>
+</div>
+<div id="median-duration-vs.-passholer-type" class="section level3">
+<h3>Median duration vs. Passholer Type</h3>
+<pre class="r"><code>bike_share_duration %&gt;% 
+  group_by(passholder_type) %&gt;% 
+  summarise(median_duration=median(duration)) %&gt;% 
+  ggplot(aes(passholder_type, median_duration))+geom_bar(stat = &quot;identity&quot;, width=0.5, fill=&quot;peru&quot;, color=&quot;black&quot;)+labs(x=&quot;Passholder Type&quot;, y=&quot;Median Duration&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<p>One day pass and walk-up have higher median duration.</p>
+</div>
+<div id="start-station-region-vs.-passholder-type" class="section level3">
+<h3>Start Station Region vs. Passholder Type</h3>
+<pre class="r"><code>bike_share_station %&gt;% 
+  filter(start_station_region %in% c(&quot;DTLA&quot;, &quot;North Hollywood&quot;, &quot;Port of LA&quot;, &quot;Westside&quot;)) %&gt;% 
+  count(start_station_region, passholder_type) %&gt;% 
+  ggplot(aes(start_station_region, passholder_type))+geom_tile(aes(fill=n))+scale_fill_distiller(name=&quot;Number of Bike Rides&quot;, palette = &quot;Spectral&quot;)+theme_minimal()+labs(x=&quot;Start Station Region&quot;, y=&quot;Passholder Type&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-22-1.png" width="672" /></p>
+<p>The most number of bike rides occur in downtown LA with monthly pass. The majority rides in Westside are done with walk-up type. It may be tourists who travel there and it makes sense that they only buy a one-time pass. Then we will take a look at how the median duration is across different start station regions and passholer types.</p>
+<pre class="r"><code>bike_share_station %&gt;% 
+  filter(start_station_region %in% c(&quot;DTLA&quot;, &quot;North Hollywood&quot;, &quot;Port of LA&quot;, &quot;Westside&quot;)) %&gt;% 
+  group_by(start_station_region, passholder_type) %&gt;% 
+  summarise(median_duration=median(duration)) %&gt;% 
+  ggplot(aes(start_station_region, passholder_type))+geom_tile(aes(fill=median_duration))+scale_fill_distiller(name=&quot;Median Duration&quot;, palette = &quot;Spectral&quot;)+theme_minimal()+labs(x=&quot;Start Station Region&quot;, y=&quot;Passholder Type&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-23-1.png" width="672" /></p>
+<p>Not surprisingly, the longest median duration happens in Westside but what surprises me is that it is the Flex Pass that makes the highest median duration. More data is needed to look into this. It is reasonable that the second highest median duration happens in Port of LA with one day pass.</p>
+</div>
+<div id="bike-types-vs.-median-duration" class="section level3">
+<h3>Bike Types vs. Median Duration</h3>
+<pre class="r"><code>bike_share_duration %&gt;% 
+  group_by(bike_type) %&gt;% 
+  summarise(median_duration=median(duration)) %&gt;% 
+  ggplot(aes(bike_type, median_duration))+geom_point(size=4, color=&quot;red&quot;)+labs(x=&quot;Bike Type&quot;, y=&quot;Median Duration&quot;)</code></pre>
+<p><img src="bike-share_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<p>This aligns with my expectation- longer rides are done with smart or electric and standard bikes are used for short rides.</p>
+<pre class="r"><code>df &lt;- sqldf(&quot;SELECT start_station, start_lat, start_lon, start_station_name, count(*) AS count FROM bike_share_station GROUP BY start_station&quot;) %&gt;% 
+  filter(!is.na(start_lat) &amp; !is.na(start_lon))
+ 
+pal &lt;- colorBin(&quot;PRGn&quot;, df$count, bins=9, alpha=1)
+
+leaflet(df) %&gt;% 
+  addTiles() %&gt;% 
+  addCircleMarkers(lng=~start_lon, lat=~start_lat, weight = 1, 
+             label = paste(df$start_station_name,df$count,sep = &quot;:&quot;),
+             color = ~pal(df$count), fillOpacity = 0.7) %&gt;% 
+  addLegend(&quot;bottomright&quot;, pal = pal, values = ~count, title = &quot;Count&quot;, opacity = 1)</code></pre>
+<div id="htmlwidget-1619057ddc56bedfb48c" style="width:672px;height:480px;" class="leaflet html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1619057ddc56bedfb48c">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addCircleMarkers","args":[[34.0485,34.04554,34.05048,34.046612,34.037048,34.04113,33.779819,34.05661,34.052898,34.043732,34.038609,34.031052,34.04607,34.050911,34.05772,34.03286,34.063179,34.04998,34.058319,34.048851,34.051941,34.044701,34.049889,34.040989,34.042061,34.048401,34.039188,34.034801,34.046822,34.05357,34.049301,34.028511,34.052872,34.039982,34.041691,34.056969,34.045422,34.051102,34.039219,34.03746,34.035679,34.035801,34.047749,34.048038,34.04681,34.060558,34.063389,34.045181,34.0532,34.05088,34.04417,34.04211,34.0406,34.039871,34.064281,34.05014,34.031891,34.04652,34.02589,33.766659,33.710979,33.74892,33.725819,33.719261,33.738979,33.74913,33.733521,33.74136,33.772301,33.771759,33.991161,33.988419,33.993771,33.998341,34.000881,33.99868,33.996239,33.984341,33.984928,33.988129,33.995369,33.99556,34.014309,34.023392,34.074829,34.0298,34.02404,34.023708,34.033642,34.028351,34.020302,34.03017,34.028679,34.026291,34.027618,34.02586,34.01252,34.062279,34.04887,34.099049,34.092491,34.098011,34.06258,34.057652,34.059689,34.06699,34.056808,34.057709,34.054031,34.005871,33.99958,34.02655,34.022518,34.172451,34.020061,34.029121,34.025688,34.00351,34.02948,33.997231,34.02018,34.023392,34.022449,33.993019,34.01376,34.02338,33.9953,33.991161,33.998322,34.014309,33.99556,33.984341,33.984928,34.000881,33.996239,33.9986,33.993729,33.988419,33.988129,34.017681,34.027771,34.02866,34.02618,34.03046,34.02457,34.027882,34.03677,34.036621,34.022331,34.017368,33.982922,34.000332,34.030472,34.009022,33.990318,34.036678,34.03352,34.035351,34.069271,34.026829,33.980789,34.162891,34.02697,34.01688,34.027828,34.075611,34.101509,33.943359,34.04813,34.051899,34.101891,34.101871,34.011799,33.986511,34.063351,34.158321,34.16835,34.168331,34.157581,34.164951,34.150688,34.165218,34.168629,34.152142,34.152,34.149872,34.162891,34.161709,34.168751,34.172451,34.177662,34.139568,33.738991,34.105782,34.105358,34.094929,34.090969,34.061661,34.026619,34.098,34.02166,34.061619,34.073639,34.05323,34.0616,34.03027,34.04557,34.063492,34.10363,34.102329,34.082649,34.017899,34.10936,34.052429,34.100109,33.990971,33.985611,33.99485,34.027649,34.022018,34.175671,33.970242,33.976189,34.092602,34.07159,34.110031,34.045181,34.08252,34.10424,34.031502,34.05896,34.094372,34.1007,33.978821,34.053551,34.04744,34.090279,34.075981,33.97298,34.15749,34.17989,34.186569,34.1721,34.16552,33.9897,33.95879,33.98489,34.017941,34.043812,34.068748,34.06163],[-118.258537,-118.256668,-118.254593,-118.262733,-118.254868,-118.267982,-118.263023,-118.237213,-118.241562,-118.260139,-118.260857,-118.26709,-118.233093,-118.240967,-118.24897,-118.268082,-118.24588,-118.247162,-118.246094,-118.246422,-118.24353,-118.252441,-118.255882,-118.255798,-118.263382,-118.260948,-118.232529,-118.231277,-118.248352,-118.266357,-118.238808,-118.256668,-118.24749,-118.266403,-118.235352,-118.253593,-118.253517,-118.264557,-118.236488,-118.265381,-118.270813,-118.23317,-118.243172,-118.253738,-118.256981,-118.238327,-118.23616,-118.250237,-118.250954,-118.248253,-118.261169,-118.256187,-118.253838,-118.250038,-118.238937,-118.233192,-118.250183,-118.237411,-118.238243,-118.261017,-118.284668,-118.275192,-118.28051,-118.282722,-118.279266,-118.280182,-118.277786,-118.278069,-118.268044,-118.276543,-118.468292,-118.45163,-118.453667,-118.461014,-118.46891,-118.472977,-118.477448,-118.47155,-118.469963,-118.471741,-118.464798,-118.481552,-118.491341,-118.479637,-118.258728,-118.270309,-118.283409,-118.279167,-118.291313,-118.288673,-118.281181,-118.280952,-118.284111,-118.277687,-118.280678,-118.284103,-118.285896,-118.271523,-118.2743,-118.291496,-118.291443,-118.287071,-118.290092,-118.292183,-118.294662,-118.290878,-118.275002,-118.279762,-118.27092,-118.429161,-118.44136,-118.408463,-118.400589,-118.370369,-118.422684,-118.403168,-118.395302,-118.43438,-118.410469,-118.445969,-118.40403,-118.399223,-118.438332,-118.414909,-118.417801,-118.479637,-118.464844,-118.468292,-118.460983,-118.491341,-118.481552,-118.47155,-118.469963,-118.46891,-118.477448,-118.472977,-118.45356,-118.45163,-118.471741,-118.409081,-118.38726,-118.410294,-118.238319,-118.389099,-118.394081,-118.388901,-118.425377,-118.425308,-118.415771,-118.420601,-118.410927,-118.402321,-118.420982,-118.425011,-118.412048,-118.425339,-118.241837,-118.434143,-118.296593,-118.393517,-118.414902,-118.370163,-118.428207,-118.428452,-118.247139,-118.291862,-118.33979,-118.248238,-118.271027,-118.293678,-118.300613,-118.29377,-118.419533,-118.441917,-118.296799,-118.370811,-118.387497,-118.396156,-118.38826,-118.363632,-118.366127,-118.355148,-118.377068,-118.361954,-118.350601,-118.378891,-118.370163,-118.372818,-118.36187,-118.370369,-118.382278,-118.362251,-118.28363,-118.291939,-118.28727,-118.284561,-118.286247,-118.298241,-118.281807,-118.300468,-118.278687,-118.305573,-118.251572,-118.278419,-118.28199,-118.273193,-118.274193,-118.287163,-118.291313,-118.28746,-118.284393,-118.291718,-118.271812,-118.302017,-118.289864,-118.421127,-118.425438,-118.417961,-118.413559,-118.409378,-118.378967,-118.426071,-118.418419,-118.28093,-118.282288,-118.287163,-118.243248,-118.27272,-118.273697,-118.288742,-118.250587,-118.331009,-118.259117,-118.407562,-118.255836,-118.24794,-118.277191,-118.256012,-118.423943,-118.39576,-118.370422,-118.388008,-118.361816,-118.375153,-118.448883,-118.44828,-118.431572,-118.255417,-118.264969,-118.30928,-118.301193],10,null,null,{"interactive":true,"className":"","stroke":true,"color":["#00441B","#E7D4E8","#C2A5CF","#9970AB","#40004B","#762A83","#40004B","#A6DBA0","#762A83","#9970AB","#9970AB","#40004B","#9970AB","#762A83","#40004B","#40004B","#762A83","#9970AB","#40004B","#762A83","#1B7837","#D9F0D3","#9970AB","#762A83","#9970AB","#E7D4E8","#40004B","#40004B","#9970AB","#762A83","#C2A5CF","#40004B","#762A83","#9970AB","#762A83","#9970AB","#762A83","#762A83","#40004B","#40004B","#40004B","#40004B","#762A83","#9970AB","#C2A5CF","#40004B","#762A83","#C2A5CF","#9970AB","#9970AB","#C2A5CF","#9970AB","#762A83","#40004B","#762A83","#40004B","#40004B","#9970AB","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#762A83","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#9970AB","#E7D4E8","#9970AB","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B"],"weight":1,"opacity":0.5,"fill":true,"fillColor":["#00441B","#E7D4E8","#C2A5CF","#9970AB","#40004B","#762A83","#40004B","#A6DBA0","#762A83","#9970AB","#9970AB","#40004B","#9970AB","#762A83","#40004B","#40004B","#762A83","#9970AB","#40004B","#762A83","#1B7837","#D9F0D3","#9970AB","#762A83","#9970AB","#E7D4E8","#40004B","#40004B","#9970AB","#762A83","#C2A5CF","#40004B","#762A83","#9970AB","#762A83","#9970AB","#762A83","#762A83","#40004B","#40004B","#40004B","#40004B","#762A83","#9970AB","#C2A5CF","#40004B","#762A83","#C2A5CF","#9970AB","#9970AB","#C2A5CF","#9970AB","#762A83","#40004B","#762A83","#40004B","#40004B","#9970AB","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#762A83","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#9970AB","#E7D4E8","#9970AB","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#762A83","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B","#40004B"],"fillOpacity":0.7},null,null,null,null,["7th &amp; Flower:18681","Olive &amp; 8th:8060","5th &amp; Grand:6430","Figueroa &amp; 9th:4833","11th &amp; Maple:982","Figueroa &amp; Pico:2941","Anaheim &amp; Avalon:102","Union Station West Portal:13339","Los Angeles &amp; Temple:3828","Grand &amp; Olympic:4349","12th &amp; Hill:4627","Hill &amp; Washington:838","3rd &amp; Santa Fe:4591","1st &amp; Judge John Aiso:2799","Hope &amp; 1st:1880","Grand &amp; Washington:837","Figueroa &amp; Cesar Chavez:3457","Spring &amp; 3rd:5518","Grand &amp; Temple:1829","Main &amp; 4th:3696","Main &amp; 1st:16548","7th &amp; Spring:10542","Hope &amp; 6th:5417","Main &amp; 9th:3419","Hope &amp; 11th:4729","Figueroa &amp; 8th:8954","Willow St &amp; Mateo St:1968","Imperial &amp; 7th:1842","Main &amp; 5th:4961","Wilshire &amp; Witmer:2695","1st &amp; Central:7451","18th &amp; San Pedro:685","2nd &amp; Hill:2331","Pico &amp; Flower:4146","5th &amp; Hewitt:2717","2nd &amp; Figueroa:5126","7th &amp; Broadway:3821","7th &amp; Bixel:3977","Factory Place &amp; Alameda:1387","Grand &amp; 14th:1533","18th &amp; Figueroa:1377","Industrial St &amp; Mateo St:1613","3rd &amp; San Pedro:3307","Olive &amp; 5th:5057","Grand &amp; 7th:7218","New High &amp; Ord:1422","Spring &amp; College:3509","Main &amp; 6th:6826","Grand &amp; 3rd:4517","Broadway &amp; 3rd:5504","Hope &amp; Olympic:6576","Broadway &amp; 9th:4723","9th &amp; Los Angeles:3798","8th &amp; Wall:1807","Hill &amp; College:2007","Temple &amp; Vignes:649","Stanford &amp; 12th:857","Traction &amp; Rose:5878","NA:17","Banning's Landing:41","Cabrillo Beach:1455","Catalina Express:130","Crafted 22nd St Park:751","DoubleTree Hotel:610","Downtown Harbor:752","Fanfare Fountain:556","Ports O'Call:789","USS IOWA:323","Waterfront Park (East):361","Waterfront Park (West):193","Abbot Kinney &amp; Cadiz:158","Washington &amp; Abbot Kinney:99","Venice &amp; Lincoln:87","California &amp; Lincoln:80","Rose &amp; 7th:100","Rose &amp; Rennie:90","Rose &amp; Main:310","Ocean Front Walk &amp; North Venice:685","Pacific &amp; North Venice:292","Windward &amp; Main:322","7th &amp; Westminster:32","Ocean Front Walk &amp; Navy:1340","Downtown Santa Monica Expo Line Station:568","17th St / SMC Expo Line Station:154","Park &amp; Echo Park:3504","Grand / LATTC:1360","University &amp; Hoover:1314","32nd &amp; Figueroa:1493","25th &amp; Vermont:624","29th &amp; Ellendale:1133","Figueroa &amp; McCarthy Way:2209","Severance &amp; Adams:1906","Hoover &amp; 29th:815","28th &amp; Figueroa:3357","28th &amp; University:525","Hoover &amp; 32nd:2498","Expo Park/LAFC:709","Westlake &amp; 3rd:1000","Union &amp; Olympic:1187","Maubert &amp; Vermont:756","Vermont Pl &amp; Vermont:505","Sunset &amp; Virgil:478","Shatto Pl &amp; Wilshire:2169","8th &amp; Vermont:799","7th &amp; Berendo:1125","4th &amp; Vermont:1069","Westlake/Macarthur Park Station:1021","7th &amp; Park View:1609","Union &amp; 7th:2405","Venice &amp; Inglewood:531","Venice &amp; Beethoven:410","Palms &amp; Motor:430","Venice &amp; Clarington:572","NA:1","Sepulveda &amp; Palms:234","Palms &amp; National:857","Bagley &amp; Venice:722","Venice &amp; Colonial:560","National &amp; Motor:281","Venice &amp; Walgrove:218","Venice &amp; Motor:474","Venice &amp; Hughes:482","Barrington &amp; National:287","Inglewood &amp; Braddock:98","Sepulveda &amp; Venice:185","17th St / SMC Expo Line Station:581","7th &amp; Westminster:216","Abbot Kinney &amp; Cadiz:1198","California &amp; Lincoln:638","Downtown Santa Monica Expo Line Station:4418","Ocean Front Walk &amp; Navy:8324","Ocean Front Walk &amp; North Venice:5907","Pacific &amp; North Venice:2080","Rose &amp; 7th:671","Rose &amp; Main:1874","Rose &amp; Rennie:476","Venice &amp; Lincoln:654","Washington &amp; Abbot Kinney:729","Windward &amp; Main:1563","Venice &amp; Glendon:626","CicLAvia Downtown Culver City Hub:99","CicLAvia Palms Hub:59","NA:1","NA:11","Pop-up Station at CicLAvia Culver City Hub:12","Public Bike Rack: Culver City Expo Line:351","_ReUse Westside Only_01:3","_ReUse Westside Only_02:15","Palms &amp; Kelton:184","Sepulveda &amp; Charnock:69","Centinela &amp; Lucile:183","Sepulveda &amp; Lucerne:150","Westwood &amp; National:157","McLaughlin &amp; Venice:200","Inglewood &amp; Ballona:85","Public Bike Rack: Westwood/Rancho Park Expo Line:182","Row DTLA:1348","Expo/Sepulveda Expo Line Station:317","Kenmore &amp; 3rd:1032","Durango &amp; Venice:337","Westlawn &amp; Beatrice:143","Del Rey Day Pop-up:12","Sepulveda &amp; National:167","Mar Vista Rec Center:169","Newton &amp; Central:386","Vermont &amp; Beverly:1296","Pop Hollywood Ciclavia Walk of Fame Hub:121","Ciclavia Watts Hub:91","Albany &amp; Olympic:1406","Berendo &amp; Olympic:581","Normandie &amp; Hollywood:667","Pop Hollywood Ciclavia Barnsdall Art Park Hub:165","Venice &amp; Sawtelle:108","Maxella &amp; Del Ray:354","Kenmore &amp; 6th:2535","Lankershim &amp; Vineland:281","Chandler &amp; Colfax:309","Chandler &amp; Laurel Canyon:193","Riverside &amp; Colfax:155","Magnolia &amp; Cartwright:179","Lankershim &amp; Moorpark:87","Magnolia &amp; Clybourn:163","North Hollywood Station:1410","Riverside &amp; Cahuenga:98","Mariota &amp; Riverside:165","Tujunga &amp; Moorpark:131","Vineland &amp; Otsego:213","Lankershim &amp; Hesby:283","Chandler &amp; Cahuenga:279","Vineland &amp; Burbank:120","Lankershim &amp; Califa:226","Public Bike Rack: Universal City/Studio City Red Line Station:106","Centre &amp; 6th:53","Vermont &amp; Franklin:278","Franklin &amp; Hillhurst:393","Hoover &amp; Fountain:257","Santa Monica &amp; Virgil:158","Wilshire &amp; Alexandria:1077","University &amp; 30th:385","Normandie &amp; Sunset:240","Flower &amp; Jefferson:508","Wilshire &amp; Hobart:1004","Sunset &amp; Douglas:518","James M. Wood &amp; Alvarado:421","Rampart &amp; Wilshire:809","23rd St &amp; Flower:724","12th &amp; Valencia:305","Virgil &amp; 6th:357","Melbourne &amp; Vermont:183","Hillhurst &amp; Kingswell:196","Lucile &amp; Hoover:397","Vermont &amp; Exposition:453","Rowena &amp; Hyperion:390","Ardmore &amp; Olympic:455","Hollywood &amp; Rodney:102","Culver &amp; Centinela:148","Culver &amp; McConnell:109","Culver &amp; Inglewood:203","Rose &amp; Overland:156","Overland &amp; Charnock:120","Tujunga &amp; Hatteras:100","Playa Vista Library:107","McConnell &amp; Runway:200","Santa Monica &amp; Sunset:350","Vendome &amp; Beverly:186","Ambrose &amp; Hillhurst:213","San Pedro &amp; Winston:460","Sunset &amp; Silver Lake:197","Tracy &amp; Hyperion:170","Ellendale Pl &amp; Adams:85","Figueroa Plaza:628","Wilcox &amp; Fountain:318","Glendale &amp; Silver Lake:303","Campus Center Drive:145","Figueroa &amp; 4th:361","Main &amp; Winston:1763","Sunset Triangle Plaza:469","Laveta Terrace &amp; Sunset:224","Concert Park:71","Riverside &amp; Laurel Canyon:15","Vineland &amp; Oxnard:3","Victory &amp; Colfax:9","Burbank &amp; Cahuenga:11","North Hollywood Plaza:10","Stanford &amp; Washington:33","Vista Del Mar &amp; Culver:151","Glen Alla Park:36","Ciclavia South Central Hub:89","Figueroa &amp; 11th:25","Western &amp; 3rd:57","Wilshire &amp; Normandie:72"],{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null]},{"method":"addLegend","args":[{"colors":["#40004B","#762A83","#9970AB","#C2A5CF","#E7D4E8","#D9F0D3","#A6DBA0","#5AAE61","#1B7837","#00441B"],"labels":["0 &ndash; 2,000","2,000 &ndash; 4,000","4,000 &ndash; 6,000","6,000 &ndash; 8,000","8,000 &ndash; 10,000","10,000 &ndash; 12,000","12,000 &ndash; 14,000","14,000 &ndash; 16,000","16,000 &ndash; 18,000","18,000 &ndash; 20,000"],"na_color":null,"na_label":"NA","opacity":1,"position":"bottomright","type":"bin","title":"Count","extra":null,"layerId":null,"className":"info legend","group":null}]}],"limits":{"lat":[33.710979,34.186569],"lng":[-118.491341,-118.231277]}},"evals":[],"jsHooks":[]}</script>
+<p>From this map, we can see that most of rides happened in downtown LA. Moreover, it is easy to see there are a few stations in North Hollywood that only had less than 10 rides from beginning 2019 through June 2020. It may be worth considering to merge a couple of stations due to their low usage, thus to reduce the maintenance fees.</p>
+</div>
+<div id="some-interesting-data-findings-include" class="section level3">
+<h3>Some interesting data findings include:</h3>
+<ol style="list-style-type: decimal">
+<li><p>The covid-19 pandemic has an impact on the use of bicycles. I expected that more rides would happen during this, but it turned out the opposite.</p></li>
+<li><p>Downtown LA has more rides during the weekdays than weekends, which is probably due to less people commute at weekends. DTLA boasts a lot of businesses and offices.</p></li>
+<li><p>Bike rides peak at around 5pm. This explains again the majority of bike riders are work commuters.</p></li>
+<li><p>Most riders ride bicycles in downtown LA with a monthly pass.</p></li>
+</ol>
+</div>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
