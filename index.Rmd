@@ -1,0 +1,5 @@
+---
+title: "welcomepage"
+---
+
+**Welcome to the exploratory data analysis(EDA) of bike shares in LA. Please click on the tab "Bike Shares in LA" for the complete analysis.**

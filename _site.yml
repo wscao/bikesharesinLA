@@ -1,0 +1,12 @@
+name: "bikesharesinLA"
+output_dir: "docs"
+navbar:
+  title: "Bike Shares in LA"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Bike Shares in LA"
+      href: bike-share.html
+output:
+  html_document:
+    theme: cosmo

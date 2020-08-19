@@ -1,13 +1,5 @@
 ---
 title: "bike share in LA"
-knit: (function(input_file, encoding) {
-  out_dir <- 'docs';
-  rmarkdown::render(input_file,
- encoding=encoding,
- output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
-author: "WS"
-date: "7/28/2020"
-output: html_document
 ---
 
 I have always been interested in knowing the current status of bike sharing in the US. I am a bike share enthusiast and used a lot of bike sharing service in China. The other day I found the data on bike share in LA and had the urge to analyze it. 
