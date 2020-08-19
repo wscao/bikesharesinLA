@@ -1,0 +1,456 @@
+---
+title: "bike share in LA"
+author: "WS"
+date: "7/28/2020"
+output: html_document
+---
+
+I have always been interested in knowing the current status of bike sharing in the US. I am a bike share enthusiast and used a lot of bike sharing service in China. The other day I found the data on bike share in LA and had the urge to analyze it. 
+
+The data comes from Metrobike share website at [here](https://bikeshare.metro.net/about/data/). 
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(ggthemes)
+library(gridExtra)
+library(GGally)
+library(leaflet)
+library(sqldf)
+library(RColorBrewer)
+```
+
+```{r}
+# read in the data
+files <- list.files(path = "data", pattern = ".q[0-9].csv$", full.names = TRUE)
+bike_share_1 <- lapply(files, read.csv) 
+
+
+# the original datasets have different formats of datetime, now convert the datetime to the same format
+for(i in seq_along(bike_share_1)) {
+  bike_share_1[[i]]$start_time <- str_replace(bike_share_1[[i]]$start_time, "([0-9]+)-([0-9]+)-([0-9]+)\\s([0-9]+):([0-9]+)(:[0-9]+)?", "\\2/\\3/\\1 \\4:\\5")
+    bike_share_1[[i]]$end_time <- str_replace(bike_share_1[[i]]$end_time, "([0-9]+)-([0-9]+)-([0-9]+)\\s([0-9]+):([0-9]+)(:[0-9]+)?", "\\2/\\3/\\1 \\4:\\5")
+  }
+
+# combine all the data frames
+bike_share <- do.call("rbind", bike_share_1)
+
+# see if the combined dataset is correct by checking its number of rows
+nrow(bike_share)
+
+#check the total number of rows before the data is combined
+row_count <- 0
+for(i in seq_along(bike_share_1)) {
+  
+  row_count <- row_count + nrow(bike_share_1[[i]])
+ 
+}
+row_count
+```
+
+## Data Preparation
+```{r}
+str(bike_share)
+summary(bike_share)
+
+# check No. of NAs
+map_dbl(bike_share, function(x) sum(is.na(x)))
+
+# check the percentage of missing values
+map_dbl(bike_share, function(x) mean(is.na(x)))
+
+# convert start_time, end_time to the correct data type
+bike_share <- bike_share %>% 
+  mutate(start_time=mdy_hm(start_time), end_time=mdy_hm(end_time))
+
+# check if the date type has been converted
+class(bike_share$start_time)
+class(bike_share$end_time)
+
+# check data consistency
+sum((bike_share$start_time%--%bike_share$end_time)%/%minutes(1) != bike_share$duration)
+
+# there are data points where duration is not equal the difference between start time and end time, let's fix that by mutating the duration variable
+bike_share <- bike_share %>% 
+  mutate(duration=(bike_share$start_time%--%bike_share$end_time)%/%minutes(1))
+str(bike_share)
+
+bike_share %>% 
+  filter(passholder_type=="Walk-up") %>% 
+  count(plan_duration)
+
+# based on the data description on Metrobike share website, 0 is used for a single ride plan (Walk-up). There are loads of walk up plans that are tagged as duration other than 0. Fix this by mutating plan_duration variable.
+bike_share <- bike_share %>% 
+  mutate(plan_duration = if_else(bike_share$passholder_type=="Walk-up", 0L, bike_share$plan_duration))
+
+bike_share %>% 
+ count(plan_duration, passholder_type)
+
+# There are testing data in the data frame, needs to be removed.
+bike_share <- bike_share %>% 
+  filter(passholder_type != "Testing")
+
+unique(bike_share$passholder_type)
+
+str(bike_share)
+
+# Obviously, plan_duration, trip_route_category, passholder_type, bike_type should be converted to factor type.
+bike_share <- bike_share %>% 
+  mutate(plan_duration=as.factor(plan_duration),
+         trip_route_category=as.factor(trip_route_category),
+         passholder_type=as.factor(passholder_type),
+         bike_type=as.factor(bike_type))
+
+str(bike_share)
+
+```
+
+
+## Exploratory Data Analysis
+
+### Frequency Distribution of Duration
+```{r}
+# set all titles in plots to be centered
+theme_update(plot.title=element_text(hjust = 0.5))
+
+# create histogram of durations
+ggplot(bike_share, aes(duration))+geom_histogram(binwidth = 10)+labs(x="Duration of Each Ride", y="Number of Rides", title = "Frequency of Duration")
+
+ggplot(bike_share, aes(duration))+geom_freqpoly(bin=50)
+str(bike_share)
+range(bike_share$duration)
+```
+
+
+Apparently, the range shows there are extreme values under `duration`. It ranges from 0 to more than 80,000 minutes, which is over 60 days. Someone cannot ride a bicycle for that long, at least in a city with a shared bike. according to the metroshare website, a good range should be from 1 minute to 1440 minutes(24 hours). 
+
+
+Even with a range between 1 and 1440, it is difficult to see the distribution. We will have to narrow the range to get a better view.
+
+
+```{r}
+bike_share %>% 
+dplyr::filter(duration<=250&duration>=1) %>% 
+mutate(itl=cut_width(duration, 10, boundary=10, closed = "left")) %>% 
+count(itl) %>% 
+mutate(pct=n/sum(n)*100) %>% 
+arrange(itl) %>% 
+   ggplot(aes(x=itl))+geom_bar(aes(y=pct), stat = "identity", fill="green", color="black")+labs(x="Duration of Each Ride(Minutes)", y="% of Rides", title = "Duration Breakdown")+theme(axis.text.x = element_text(angle=70,hjust =1 ,size=8))+geom_text(aes(label=sprintf("%0.2f", pct), y=pct+2), size=2.5, hjust=0.5)
+```
+
+The duration histogram aligns with my expectation that it peaks in count at the shorter rides. The number of rides peak at the duration of around 1-10 minutes. The distribution has a long tail at the upper end. I expect those long rides are usually done by tourists with walk-up or one-day pass type. I will examine this later on. For this histogram, I will create a better plot showing the percentage each interval is of all durations.
+
+
+##Station Frequency
+
+```{r, message = FALSE}
+# read in the station data
+stations <- read_csv("data/metro-bike-share-stations-2020-07-01.csv")
+
+# join bike_share data frame and stations data frame
+
+bike_share_duration <- bike_share %>% 
+  filter(duration>0 & duration<=1440)
+
+bike_share_station <- bike_share_duration %>% 
+  left_join(stations %>% select(-Go_live_date, -Status), by=c("start_station"="Station_ID")) %>% 
+  rename(start_station_name="Station_Name", start_station_region="Region")
+
+bike_share_station<- bike_share_station %>% 
+  left_join(stations %>% select(-Go_live_date, -Status), by=c("end_station"="Station_ID")) %>% 
+  rename(end_station_name="Station_Name", end_station_region="Region")
+
+str(bike_share_station)
+
+first_10_start <- bike_share_station %>% 
+  count(start_station_region, start_station_name) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+ggplot(first_10_start)+geom_bar(aes(x=fct_reorder(as.factor(start_station_name),n), y=n, fill=as.factor(start_station_region)), stat = "identity")+theme_economist_white()+scale_fill_manual(name="Region", values = c("#347a94", "#29a96b", "#ffa600"))+labs(x="", y="", title = "Start Station Distribution (First 10)")+coord_flip()
+
+```
+
+The Virtual Station, according to the metroshare website,  is used by staff to check in or check out a bike remotely for a special event or in a situation in which a bike could not otherwise be checked in or out to a station. And the rest of stations are mostly located in downtown LA, except 1 is in Westside.
+
+### End Station
+
+Now let's take a look at the distribution of end stations.
+
+```{r}
+first_10_end <- bike_share_station %>% 
+  count(end_station_region, end_station_name) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+ggplot(first_10_end)+geom_bar(aes(x=fct_reorder(as.factor(end_station_name),n), y=n, fill=as.factor(end_station_region)), stat = "identity")+theme_economist_white()+scale_fill_manual(name="Region", values = c("#347a94", "#ffa600"))+labs(x="", y="", title = "End Station Distribution (First 10)")+coord_flip()
+
+```
+
+Similarly, the end stations are all located in downtown LA with one exception in Westside.
+
+### Trip Route Frequency
+
+```{r}
+ggplot(bike_share_duration, aes(as.factor(trip_route_category)))+geom_bar(aes(y=..prop.., group=1), fill="#cccf6e", color="black", width = 0.5)+labs(x="", title = "Proportions of Trip Route")
+```
+
+One-way trips account for most of the rides. More than 80% of rides are one way.
+
+### Passholder Type
+
+```{r}
+ggplot(bike_share)+geom_bar(aes(x=passholder_type, y=..prop.., group=1), fill="#9da0d1", color="black")+labs(x="", title = "Proportions of Passholer Types")
+```
+  
+More than 60% of the rides used Monthly Pass, over 20% are with Walk-up and comes next is Annual Pass with nearly 10%.
+
+### Bike Types
+
+```{r}
+ggplot(bike_share)+geom_bar(aes(x=bike_type, y=..prop.., group=1), fill="#fea884", color="black", width=0.5)+labs(x="", title = "Proportions of Bike Types")
+```
+
+Nearly half of the rides were done with standard bicycles and around 37% were with electric bikes.
+
+### Bike Rides at Different Regions
+
+```{r}
+ggplot(bike_share_station, aes(x=as.factor(start_station_region), y=..prop..))+geom_bar(aes(group=1), fill="peru", color="black")+labs(x="", y="", title="Bike Rides Start Regions vs Proportions of Bike Rides ")
+```
+
+Not surprisingly, over 70% of the rides started in downtown LA. There are NA values, let's extract those rows and take a look.
+
+```{r}
+bike_share_station %>% 
+  filter(is.na(start_station_region)) %>% 
+  head()
+```
+
+It's only 3o data points without a valid start station name, we can drop these data. Also a similar approach shows that the start station region with N/A value are mostly for virtual station, which is used for staff to check in or out for events. These data points can also be dropped. In addition, the free bikes looks weird. Let's extract those data points and take a close look.
+
+```{r}
+bike_share_station %>% 
+  filter(start_station_region=="Free Bikes") %>% 
+  head()
+```
+
+The station providing free bikes consists of less than 1% of the total bike rides, which can be dropped. The refined plot is as follows:
+
+```{r}
+ggplot(bike_share_station %>% filter(start_station_region %in% c("DTLA", "North Hollywood", "Port of LA", "Westside")), aes(x=as.factor(start_station_region), y=..prop..))+geom_bar(aes(group=1), fill="peru", color="black")+labs(x="", y="", title="Bike Rides Start Regions vs Proportions of Bike Rides ")
+```
+
+
+## Time series analysis
+
+```{r}
+# extract year, month, day and hour from the start_time variable and create new variables for them.
+
+bike_share_duration <- bike_share_duration %>% 
+  mutate(year_start=year(start_time),
+         start_date=as_date(start_time),
+         month_start=month(start_time, label = TRUE),
+         day_of_the_week=wday(start_time, label = TRUE, week_start = 1),
+         hour=hour(start_time))
+
+str(bike_share_duration)
+
+bike_share_duration %>% 
+  count(year_start, month_start) %>% 
+  ggplot(aes(month_start, n, group=as.factor(year_start)))+geom_point(aes(color=as.factor(year_start)))+geom_line(aes(color=as.factor(year_start)))+labs(x="", y="", title = "Month vs Number of Rides")+scale_color_manual("Year", values = c("#42c494", "#cccf6e"))+theme(axis.text.x=element_text(angle = 60, face ="bold", size= 10,hjust=1))
+
+```
+
+
+In 2019, the use of bike shar service had a sharp increase in summer with a peak in August, which is quite reasonable. People loves to go outdoors in summer and enjoy the summer time. 2020 started strong with more rides than the same time in 2019, but then Coronavirus pandemic hit and in March, California implemented strict stay at home order, the number slumped in March and continued to decrease in April. As California started to reopen slowly in May, you can see the number went up but quickly dropped to where it was in April, probably due to the surge of infection cases after the reopening. 
+
+
+### the Use of Bikes on Different Days Throughout the Week
+
+```{r}
+
+# year 2019
+p1 <- bike_share_duration %>% 
+  inner_join(bike_share_station, by=c("trip_id")) %>% 
+  filter(year_start==2019, start_station_region %in% c("DTLA", "North Hollywood", "Port of LA", "Westside")) %>% 
+  count(start_station_region, day_of_the_week) %>% 
+  mutate(pct=n/sum(n)*100) %>% 
+  ggplot(aes(x=day_of_the_week,y=pct))+geom_point(aes(color=as.factor(start_station_region)), alpha=0.4,size=4)+scale_y_continuous(breaks=seq(0,20,2))+scale_color_discrete("Regions")+labs(x="Day of the Week", y="% of the Bike Rides", title = "Percentage of Bike Rides vs. Day of the Week", subtitle = "Year: 2019")
+
+# year 2020 from Jan through Jun
+p2 <- bike_share_duration %>% 
+  inner_join(bike_share_station, by=c("trip_id")) %>% 
+  filter(year_start==2020, start_station_region %in% c("DTLA", "North Hollywood", "Port of LA", "Westside")) %>% 
+  count(start_station_region, day_of_the_week) %>% 
+  mutate(pct=n/sum(n)*100) %>% 
+  ggplot(aes(x=day_of_the_week,y=pct))+geom_point(aes(color=as.factor(start_station_region)), alpha=0.4,size=4)+scale_y_continuous(breaks=seq(0,20,2))+scale_color_discrete("Regions")+labs(x="Day of the Week", y="% of the Bike Rides", title = "Percentage of Bike Rides vs. Day of the Week", subtitle = "Year: 2020")
+
+grid.arrange(p1, p2, ncol = 1)
+  
+```
+
+
+We find in both year 2019 and 2020:
+
+* During the course of the week, downtown LA has more bike rides on weekdays, and it dropped about 4% on weekends. It is probably due to the fact that downtown LA is home to many businesses and companies. Commuters ride bikes between offices and transits. 
+
+* On the other hand, Westside sees a slight increase on weekends. 
+
+
+### the Use of Bikes Throughout the day
+
+```{r}
+
+# year 2019
+p3 <- bike_share_duration %>% 
+  filter(year_start==2019) %>% 
+  count(hour) %>% 
+  ggplot(aes(x=hour,y=n))+geom_point(color="#8cbcac")+labs(x="Hour of the Day", y="Number of Bike Rides", title = "Bike Rides vs. Hour of the Day", subtitle = "Year: 2019")+geom_line(color="#488f31")
+  
+  # year 2020 from Jan through Jun
+  p4 <- bike_share_duration %>% 
+  filter(year_start==2020) %>% 
+  count(hour) %>% 
+  ggplot(aes(x=hour,y=n))+geom_point(color="#ec9c9d")+labs(x="Hour of the Day", y="Number of Bike Rides", title = "Bike Rides vs. Hour of the Day", subtitle = "Year: 2020")+geom_line(color="#de425b")
+  
+  grid.arrange(p3, p4, nrow=1)
+```
+
+We can see that:
+
+* Although the total number of rides differ for year 2019 and 2020(from Jan through Jun),  the trend looks almost the same. Both of them peaked at around 5pm, which was the time people usually got off work.
+
+* During 0- 5am, in 2019, the total number of bike rides is no more than 10,000 during the whole year. In 2020, which only includes Jan through Jun, the number is around 3,000.
+
+To create a better plot, we will use percentage to show the proportions.
+
+```{r}
+# year 2019
+p5 <- bike_share_duration %>% 
+  filter(year_start==2019) %>% 
+  count(hour) %>% 
+  mutate(pct=n/sum(n)*100) %>% 
+  ggplot(aes(hour, pct))+geom_freqpoly(stat = "identity", color="#8f554c")+labs(x="Hour of the Day", y="% of the Bike Rides", title="Bike Rides vs. Hour of the Day", subtitle = "Year: 2019")
+
+# year 2020
+p6 <- bike_share_duration %>% 
+  filter(year_start==2020) %>% 
+  count(hour) %>% 
+  mutate(pct=n/sum(n)*100) %>% 
+  ggplot(aes(hour, pct))+geom_freqpoly(stat = "identity", color="#9f76de")+labs(x="Hour of the Day", y="% of the Bike Rides", title="Bike Rides vs. Hour of the Day", subtitle = "Year: 2020")
+
+grid.arrange(p5, p6, ncol=1)
+```
+
+We can also use a heatmap to show the distribution of bike rides through the lens of hour and day.
+```{r}
+bike_share_duration %>% 
+  count(day_of_the_week, hour) %>% 
+  ggplot(aes(hour, day_of_the_week, fill=n))+geom_tile()+scale_fill_distiller(name="", palette = "Spectral")+labs(x="Hour of the Day", y="Day of the Week", title="Bike Use Throughout the Day and the week")
+```
+
+It's fairly clear that it boasts the most bike rides at around 5 in the afternoon of every weekday.
+
+
+### the Variation of Median Duration Througout the Week
+
+```{r}
+bike_share_duration %>% 
+  group_by(day_of_the_week) %>% 
+  mutate(median_duration=median(duration)) %>% 
+  ggplot(aes(day_of_the_week, median_duration))+geom_point(size=4, color="peru")+labs(x="Day of the Week", y="Median Duration")
+```
+
+
+It is interesting to see that the median duration is higher at weekends but it doesn't come as as a surprise. People usually have more time to relax and explore the city at weekends. It is intriguing to examine what the median duration looks like across different regions. 
+
+
+```{r, message= FALSE}
+bike_share_duration %>% 
+  left_join(bike_share_station) %>% 
+  filter(start_station_region %in% c("DTLA", "North Hollywood", "Port of LA", "Westside")) %>% 
+  group_by(start_station_region, day_of_the_week) %>% 
+  mutate(median_duration=median(duration)) %>% 
+  ggplot(aes(day_of_the_week, median_duration))+geom_point(aes(color=as.factor(start_station_region)))+geom_line(aes(group=as.factor(start_station_region), color=as.factor(start_station_region)))+labs(x="Day of the Week", y="Median Duration(Minutes)")+scale_color_discrete(name="Regions")
+```
+
+This plot shows that:
+
+* Throughout the week, downtown LA has the lowest median duration.
+* Except downtown LA, other regions have high median duration. It may be due to the fact that they are mostly sightseeing places for tourists. 
+* Even in downtown LA, the median duration increases at weekends.
+
+
+### Median duration vs. Passholer Type
+```{r}
+bike_share_duration %>% 
+  group_by(passholder_type) %>% 
+  summarise(median_duration=median(duration)) %>% 
+  ggplot(aes(passholder_type, median_duration))+geom_bar(stat = "identity", width=0.5, fill="peru", color="black")+labs(x="Passholder Type", y="Median Duration")
+```
+
+One day pass and walk-up have higher median duration.
+
+### Start Station Region vs. Passholder Type
+
+```{r}
+bike_share_station %>% 
+  filter(start_station_region %in% c("DTLA", "North Hollywood", "Port of LA", "Westside")) %>% 
+  count(start_station_region, passholder_type) %>% 
+  ggplot(aes(start_station_region, passholder_type))+geom_tile(aes(fill=n))+scale_fill_distiller(name="Number of Bike Rides", palette = "Spectral")+theme_minimal()+labs(x="Start Station Region", y="Passholder Type")
+```
+
+The most number of bike rides occur in downtown LA with monthly pass. The majority rides in Westside are done with walk-up type. It may be tourists who travel there and it makes sense that they only buy a one-time pass. Then we will take a look at how the median duration is across different start station regions and passholer types.
+
+```{r}
+bike_share_station %>% 
+  filter(start_station_region %in% c("DTLA", "North Hollywood", "Port of LA", "Westside")) %>% 
+  group_by(start_station_region, passholder_type) %>% 
+  summarise(median_duration=median(duration)) %>% 
+  ggplot(aes(start_station_region, passholder_type))+geom_tile(aes(fill=median_duration))+scale_fill_distiller(name="Median Duration", palette = "Spectral")+theme_minimal()+labs(x="Start Station Region", y="Passholder Type")
+```
+
+Not surprisingly, the longest median duration happens in Westside but what surprises me is that it is the Flex Pass that makes the highest median duration. More data is needed to look into this. It is reasonable that the second highest median duration happens in Port of LA with one day pass. 
+
+
+### Bike Types vs. Median Duration
+
+```{r}
+bike_share_duration %>% 
+  group_by(bike_type) %>% 
+  summarise(median_duration=median(duration)) %>% 
+  ggplot(aes(bike_type, median_duration))+geom_point(size=4, color="red")+labs(x="Bike Type", y="Median Duration")
+```
+
+This aligns with my expectation- longer rides are done with smart or electric and standard bikes are used for short rides.
+
+
+
+```{r}
+df <- sqldf("SELECT start_station, start_lat, start_lon, start_station_name, count(*) AS count FROM bike_share_station GROUP BY start_station") %>% 
+  filter(!is.na(start_lat) & !is.na(start_lon))
+ 
+pal <- colorBin("PRGn", df$count, bins=9, alpha=1)
+
+leaflet(df) %>% 
+  addTiles() %>% 
+  addCircleMarkers(lng=~start_lon, lat=~start_lat, weight = 1, 
+             label = paste(df$start_station_name,df$count,sep = ":"),
+             color = ~pal(df$count), fillOpacity = 0.7) %>% 
+  addLegend("bottomright", pal = pal, values = ~count, title = "Count", opacity = 1)
+```
+
+
+From this map, we can see that most of rides happened in downtown LA. Moreover, it is easy to see there are a few stations in North Hollywood that only had less than 10 rides from beginning 2019 through June 2020. It may be worth considering to merge a couple of stations due to their low usage, thus to reduce the maintenance fees. 
+
+### Some interesting data findings include:
+
+1. The covid-19 pandemic has an impact on the use of bicycles. I expected that more rides would happen during this, but it turned out the opposite.
+
+2. Downtown LA has more rides during the weekdays than weekends, which is probably due to less people commute at weekends. DTLA boasts a lot of businesses and offices.
+
+3. Bike rides peak at around 5pm. This explains again the majority of bike riders are work commuters. 
+
+4. Most riders ride bicycles in downtown LA with a monthly pass.
