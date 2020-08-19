@@ -1,5 +1,10 @@
 ---
 title: "bike share in LA"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "WS"
 date: "7/28/2020"
 output: html_document
